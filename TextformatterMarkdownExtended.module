@@ -1,0 +1,77 @@
+<?php namespace ProcessWire;
+
+/**
+ * ProcessWire Markdown Textformatter Extended
+ *
+ * @author kixe (Christoph Thelen) 2018-08-10
+ * @copyright kixe (Christoph Thelen)
+ * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
+ * @link http://processwire.com/talk
+ *
+ * made for ProcessWire 3.x
+ * @link http://processwire.com
+ * @copyright 2016 by Ryan Cramer 
+ *
+ * Parsedown @copyright Emanuil Rusev.
+ * Markdown invented by John Gruber.
+ * 
+ * @version 1.0.0
+ * @since 1.0.0 init 2018-08-10
+ *
+ */
+
+class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implements ConfigurableModule {
+
+	public static function getModuleInfo() {
+		return array(
+			'title'   => 'Markdown/Parsedown Extended',
+			'version' => 100,
+			'author' => 'kixe',
+			'summary' => "Extension for Markdown/Parsedown extra lightweight markup language by Emanuil Rusev. Based on Markdown by John Gruber.",
+		);
+	}
+
+	const flavorParsedownExtended = 2048; // high number to prevent conflicts
+
+	public function __construct() {
+		parent::__construct();
+	}
+
+	/**
+	 * Given a string, return a version processed with markdown
+	 * 
+	 * @param $str String to process
+	 * @param int $flavor Flavor of markdown (default=parsedown extra)
+	 * @return string Processed string
+	 * 
+	 */
+	public function markdown($str, $flavor = 0) {
+
+		$markdown = parent::markdown($str, $flavor); // load required Parsedown classes
+
+		if($flavor & self::flavorParsedownExtended) {
+			// parsedown extended
+			if(!class_exists("\\ParsedownExtended")) {
+				require_once(dirname(__FILE__) . "/parsedown-extended/ParsedownExtended.php");
+			}
+			$extra = new \ParsedownExtended();
+			$str = $extra->text($str);
+				
+			return $str; 
+		}
+		else return $markdown;
+	}
+
+	public function getModuleConfigInputfields(array $data) {
+		$inputfields = $this->wire(new InputfieldWrapper());
+		$f = $this->wire('modules')->get('InputfieldRadios');
+		$f->attr('name', 'flavor');
+		$f->label = $this->_('Markdown flavor to use');
+		$f->addOption(self::flavorParsedownExtended, 'Parsedown Extended');
+		$f->addOption(parent::flavorParsedownExtra, 'Parsedown Extra');
+		$f->addOption(parent::flavorParsedown, 'Parsedown'); 
+		$f->attr('value', isset($data['flavor']) ? (int) $data['flavor'] : parent::flavorDefault); 
+		$inputfields->add($f);
+		return $inputfields; 
+	}
+}
