@@ -54,7 +54,7 @@ class ParsedownExtended extends ParsedownExtra {
      * #@.headline-1 Headline       <h1 class="headline-1"></h1>
      * *@#unique_em emphatic*       <em id="unique_em">emphatic</em>
      *
-     * **[@data-label='Hyper Text Markup Language'**
+     * **@data-label='Hyper Text Markup Language' HTML**
      *                              <strong data-title="Hyper Text Markup Languag">HTML</strong>
      * 
      */
