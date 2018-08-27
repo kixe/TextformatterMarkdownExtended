@@ -55,7 +55,7 @@ class ParsedownExtended extends ParsedownExtra {
      * *@#unique_em emphatic*       <em id="unique_em">emphatic</em>
      *
      * **@data-label='Hyper Text Markup Language' HTML**
-     *                              <strong data-title="Hyper Text Markup Languag">HTML</strong>
+     *                              <strong data-lable="Hyper Text Markup Languag">HTML</strong>
      * 
      */
     protected function element(array $Element) {
