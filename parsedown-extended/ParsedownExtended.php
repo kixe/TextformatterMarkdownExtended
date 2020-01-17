@@ -9,8 +9,9 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.0
+ * @version 1.0.1
  * @since 1.0.0 init 2018-08-10
+ * @since 1.0.1 support for images 2020-01-16
  *
  */
 
@@ -48,34 +49,47 @@ class ParsedownExtended extends ParsedownExtra {
     }
 
     /**
-     * Add any attribute to any tag by preceeding the attribut to the inner content
+     * Add any attribute to any tag by preceeding the attribut to the inner content with a leading @
      * 
-     * SYNTAX                       RESULT
-     * #@.headline-1 Headline       <h1 class="headline-1"></h1>
-     * *@#unique_em emphatic*       <em id="unique_em">emphatic</em>
+     * SYNTAX                               RESULT
+     * #@.headline-1 Headline               <h1 class="headline-1"></h1>
+     * *@#unique_em emphatic*               <em id="unique_em">emphatic</em>
+     * [@.link-class link](targeturl)       <a href="targeturl" class="link-class">link</a>
+     * ![@.image-class alttext](srcurl)     <img src="targeturl" class="image-class" alt="alttext"/>
      *
      * **@data-label='Hyper Text Markup Language' HTML**
-     *                              <strong data-lable="Hyper Text Markup Languag">HTML</strong>
+     *                                  <strong data-lable="Hyper Text Markup Languag">HTML</strong>
      * 
      */
     protected function element(array $Element) {
-        if (isset($Element['text']) && is_string($Element['text']) && strpos($Element['text'], '@') === 0 && strpos($Element['text'], ' ')) {
-            if (empty($Element['attributes'])) $Element['attributes'] = array();
-            $regex ="/(@(([\.#]{1})([^\s]+))|([^\s\"'=\/>@]+)?=(\"([^\"]+)\"|'([^']+)'|([^\s=]+)))?[\s]+(.*)?/";
-            if (!preg_match_all($regex, $Element['text'], $matches)) return parent::element($Element);
-            $key = $val = false;
-            if (!empty($matches[3][0])) {
-                if ($matches[3][0] == '#') $key = 'id';
-                if ($matches[3][0] == '.') $key = 'class';
-                $val = $matches[4][0];         
-            }
-            else if (!empty($matches[5][0]) && !empty($matches[6][0])) {
-                $key = $matches[5][0];
-                $val = trim($matches[6][0],"\"'");               
-            }
-            if ($key && $val) $Element['attributes'][$key] = $val;
-            $Element['text'] = $matches[10][0];
-        }   
+
+        // var_dump($Element);
+
+        // case image
+        if ($Element['name'] == 'img' && isset($Element['attributes']['alt']) && strpos($Element['attributes']['alt'], '@') === 0 && strpos($Element['attributes']['alt'], ' ')) $hideout = $Element['attributes']['alt'];
+        // case text
+        else if (isset($Element['text']) && is_string($Element['text']) && strpos($Element['text'], '@') === 0 && strpos($Element['text'], ' ')) $hideout = $Element['text'];
+        // hand over to parent
+        else return parent::element($Element);
+
+        if (empty($Element['attributes'])) $Element['attributes'] = array();
+        $regex ="/(@(([\.#]{1})([^\s]+))|([^\s\"'=\/>@]+)?=(\"([^\"]+)\"|'([^']+)'|([^\s=]+)))?[\s]+(.*)?/";
+        if (!preg_match_all($regex, $hideout, $matches)) return parent::element($Element);
+        $key = $val = false;
+        if (!empty($matches[3][0])) {
+            if ($matches[3][0] == '#') $key = 'id';
+            if ($matches[3][0] == '.') $key = 'class';
+            $val = $matches[4][0];         
+        }
+        else if (!empty($matches[5][0]) && !empty($matches[6][0])) {
+            $key = $matches[5][0];
+            $val = trim($matches[6][0],"\"'");               
+        }
+        if ($key && $val) $Element['attributes'][$key] = $val;
+
+        if ($Element['name'] == 'img') $Element['attributes']['alt'] = $matches[10][0];
+        else $Element['text'] = $matches[10][0];
+          
         return parent::element($Element);
     }
 }
