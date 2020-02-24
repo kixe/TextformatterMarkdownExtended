@@ -20,6 +20,14 @@ followed by a dot (.) for a class and hash character (#) for an ID. For any othe
 | \[@.link-class link](targeturl) | `<a href="targeturl" class="link-class">link</a>` |
 | \!\[@.image-class alttext](srcurl) | `<img src="targeturl" class="image-class" alt="alttext"/>` |
 
+## Pagelink by ProcessWire ID
+Use an id (pure integer) of an existing published Processwire page as the target in a markdown link to get the user-language related link to this page.
+
+| MARKDOWN | HTML |
+|:-|:-| 
+| \[link\](1234)| `<a href="/en/targeturl/">link</a>` |
+
+
 ## Links
 
 + [https://daringfireball.net/projects/markdown/](https://daringfireball.net/projects/markdown/)
