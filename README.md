@@ -37,3 +37,4 @@ Use an id (pure integer) of an existing published Processwire page as the target
 + [https://michelf.ca/projects/php-markdown/extra/](https://michelf.ca/projects/php-markdown/extra/)
 + [https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet)
 + [https://fletcher.github.io/MultiMarkdown-5/tables.html](https://fletcher.github.io/MultiMarkdown-5/tables.html)
++ [https://css-tricks.com/responsive-data-tables/](https://css-tricks.com/responsive-data-tables/)
