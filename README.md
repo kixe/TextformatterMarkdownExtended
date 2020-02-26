@@ -6,6 +6,7 @@ This textformatter includes an extension for ParsedownExtra made by Emanuil Ruse
 ## Responsive Table
 
 Each `<td>` of a table column gets a *data-label* attribute with the value pulled from the inner content of `<theader> <th>`
+https://css-tricks.com/responsive-data-tables/
 
 ## Any Attribute
 
