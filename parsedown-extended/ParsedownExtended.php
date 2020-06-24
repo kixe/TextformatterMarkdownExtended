@@ -9,9 +9,10 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.1
+ * @version 1.0.2
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
+ * @since 1.0.2 fixed bug cut off @attr + multiline values 2020-01-16
  *
  */
 
@@ -63,8 +64,6 @@ class ParsedownExtended extends ParsedownExtra {
      */
     protected function element(array $Element) {
 
-        // var_dump($Element);
-
         // case image
         if ($Element['name'] == 'img' && isset($Element['attributes']['alt']) && strpos($Element['attributes']['alt'], '@') === 0 && strpos($Element['attributes']['alt'], ' ')) $hideout = $Element['attributes']['alt'];
         // case text
@@ -73,7 +72,7 @@ class ParsedownExtended extends ParsedownExtra {
         else return parent::element($Element);
 
         if (empty($Element['attributes'])) $Element['attributes'] = array();
-        $regex ="/(@(([\.#]{1})([^\s]+))|([^\s\"'=\/>@]+)?=(\"([^\"]+)\"|'([^']+)'|([^\s=]+)))?[\s]+(.*)?/";
+        $regex ="/(@(([\.#]{1})([^\s]+))|([^\s\"'=\/>@]+)?=(\"([^\"]+)\"|'([^']+)'|([^\s=]+)))?([\s]+(.*))?/";
         if (!preg_match_all($regex, $hideout, $matches)) return parent::element($Element);
         $key = $val = false;
         if (!empty($matches[3][0])) {
@@ -87,8 +86,8 @@ class ParsedownExtended extends ParsedownExtra {
         }
         if ($key && $val) $Element['attributes'][$key] = $val;
 
-        if ($Element['name'] == 'img') $Element['attributes']['alt'] = $matches[10][0];
-        else $Element['text'] = $matches[10][0];
+        if ($Element['name'] == 'img') $Element['attributes']['alt'] = $matches[11][0];
+        else $Element['text'] = implode("\n", $matches[11]);
           
         return parent::element($Element);
     }
