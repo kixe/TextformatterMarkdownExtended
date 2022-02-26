@@ -15,11 +15,14 @@
  * Parsedown @copyright Emanuil Rusev.
  * Markdown invented by John Gruber.
  * 
- * @version 1.0.2
+ * @version 1.0.6 2022-02-22
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
  * @since 1.0.2 support for markdown links with a processwire page id as target 2020-02-24
- *
+ * @since 1.0.3 pull label from any field for internal pages by surrounding fieldname with curled brackets e.g. [{headline}](1001), leave empty to pull from title, with fallback to httpUrl e.g. [](1001) 2020-10-22
+ * @since 1.0.4 update arguments markdown() derived from parent class 2022-01-13
+ * @since 1.0.5 fixed render bug after update to ParsedownExtra 0.8.0 (PW >= 3.0.181), allow multiple attributes 2022-02-20
+ * @since 1.0.6 fixed test markup bug 2022-01-22
  */
 
 class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implements ConfigurableModule {
@@ -27,9 +30,10 @@ class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implement
 	public static function getModuleInfo() {
 		return array(
 			'title'   => 'Markdown/Parsedown Extended',
-			'version' => 102,
+			'version' => 106,
 			'author' => 'kixe',
 			'summary' => "Extension for Markdown/Parsedown extra lightweight markup language by Emanuil Rusev. Based on Markdown by John Gruber.",
+			'requires' => ['ProcessWire>=3.0.181']
 		);
 	}
 
@@ -47,9 +51,10 @@ class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implement
 	 * @return string Processed string
 	 * 
 	 */
-	public function markdown($str, $flavor = 0) {
+	public function markdown($str, $flavor = null, $safeMode = null) {
 
-		$markdown = parent::markdown($str, $flavor); // load required Parsedown classes
+		// load required Parsedown classes
+		$markdown = parent::markdown($str, $flavor, $safeMode);
 
 		if($flavor & self::flavorParsedownExtended) {
 			// markdown links with Processwire page targets (marked by id)
@@ -72,7 +77,7 @@ class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implement
 	 * 
 	 */
 	protected function getUrlByPageId(&$str) {
-		$regex = "_\[([^\]]+)\]\(([0-9]+)\)_";
+		$regex = "_\[([^\]]*)\]\(([0-9]+)\)_";
 		if(!preg_match_all($regex, $str, $matches)) return;
 
 		foreach($matches[0] as $key => $link) {
@@ -80,21 +85,38 @@ class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implement
 			$page = $this->wire('pages')->get($pageId);
 			if (!$page->id) continue;
 			$title = $matches[1][$key];
+			if (!strlen($title)) $title = $page->get('title|httpUrl');
+			else if (strpos($title, '{') === 0) $title = wirePopulateStringTags($title, $page);
+			if (!$title) $title = $this->_('undefined');
 			$replacement = "[$title]($page->url)";
 			$str = str_replace($link, $replacement, $str); 
 		}
 	}
 
-	public function getModuleConfigInputfields(array $data) {
-		$inputfields = $this->wire(new InputfieldWrapper());
-		$f = $this->wire('modules')->get('InputfieldRadios');
-		$f->attr('name', 'flavor');
-		$f->label = $this->_('Markdown flavor to use');
-		$f->addOption(self::flavorParsedownExtended, 'Parsedown Extended');
-		$f->addOption(parent::flavorParsedownExtra, 'Parsedown Extra');
-		$f->addOption(parent::flavorParsedown, 'Parsedown'); 
-		$f->attr('value', isset($data['flavor']) ? (int) $data['flavor'] : parent::flavorDefault); 
-		$inputfields->add($f);
+	public function getModuleConfigInputfields(InputfieldWrapper $inputfields) {
+
+		$session = $this->wire()->session;
+		$text = $this->wire()->input->post('_test_markdown');
+		if($text) {
+			$session->setFor($this, 'text', $text);
+		} else {
+			$text = $session->getFor($this, 'text');
+			$session->removeFor($this, 'text');
+			if($text) {
+				$markup = $this->markdown($text, $this->flavor);
+				$this->message("<strong>" . __('Test markdown results') . ":</strong><br />" . 
+					"<pre>" . $this->wire()->sanitizer->entities($markup) . '</pre>', 
+					Notice::allowMarkup | Notice::noGroup
+				); 
+			}
+		}
+
+		parent::getModuleConfigInputfields($inputfields);
+		if (!empty($text)) {
+			$f = $inputfields->get('_test_markdown');
+			$f->val($text);
+		}
+		$inputfields->get('flavor')->addOption(self::flavorParsedownExtended, 'Parsedown Extended');
 		return $inputfields; 
 	}
 }

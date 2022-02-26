@@ -1,7 +1,8 @@
 <?php
 
 /**
- * Parsedown @copyright Emanuil Rusev.
+ * Parsedown @copyright 2013 Emanuil Rusev, erusev.com
+ * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  * Markdown invented by John Gruber.
  *
  * This extension by
@@ -9,17 +10,27 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.2
+ * @version 1.0.6
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
  * @since 1.0.2 fixed bug cut off @attr + multiline values 2020-01-16
+ * @since 1.0.3 fixed bug get special attributes 2020-07-31
+ * @since 1.0.4 fixed bug get notice if ['name' => ...] is not defined 2021-12-13
+ * @since 1.0.5 fixed bug get notice if $Element['name'] == 'img' is not defined 2022-02-08
+ * @since 1.0.6 fixed render bug after update to 0.8.0 (PW >= 3.0.181), allow multiple attributes 2022-02-20
  *
  */
 
 class ParsedownExtended extends ParsedownExtra {
 
+    function __construct() {
+        if (version_compare(parent::version, '0.8.0') < 0) {
+            throw new Exception('ParsedownExtended requires a later version of ParsedownExtra');
+        }
+    }
+
     /**
-     * responsive table providing data-label attribut pulled from theader th
+     * responsive table providing data-label attribut to first td of each row pulled from theader th
      * 
      */
     protected function blockTable($Line, array $Block = null) {
@@ -50,45 +61,94 @@ class ParsedownExtended extends ParsedownExtra {
     }
 
     /**
-     * Add any attribute to any tag by preceeding the attribut to the inner content with a leading @
+     * Add any attribute to any tag by preceeding the attribute to the inner content with a leading @
+     * use curly brackets to assign multiple attributes
      * 
-     * SYNTAX                               RESULT
-     * #@.headline-1 Headline               <h1 class="headline-1"></h1>
-     * *@#unique_em emphatic*               <em id="unique_em">emphatic</em>
-     * [@.link-class link](targeturl)       <a href="targeturl" class="link-class">link</a>
-     * ![@.image-class alttext](srcurl)     <img src="targeturl" class="image-class" alt="alttext"/>
+     * SYNTAX                                   RESULT
+     * #@.headline-1 Headline                   <h1 class="headline-1"></h1>
+     * *@#unique_em emphatic*                   <em id="unique_em">emphatic</em>
+     * [@.link-class link](targeturl)           <a href="targeturl" class="link-class">link</a>
+     * ![@.image-class alttext](srcurl)         <img src="targeturl" class="image-class" alt="alttext"/>
+     * @{.classname data-foo="bar"}             <p class="classname another" data-foo="bar"> ... </p>
      *
      * **@data-label='Hyper Text Markup Language' HTML**
-     *                                  <strong data-lable="Hyper Text Markup Languag">HTML</strong>
+     *                                          <strong data-label="Hyper Text Markup Languag">HTML</strong>
      * 
      */
-    protected function element(array $Element) {
-
-        // case image
-        if ($Element['name'] == 'img' && isset($Element['attributes']['alt']) && strpos($Element['attributes']['alt'], '@') === 0 && strpos($Element['attributes']['alt'], ' ')) $hideout = $Element['attributes']['alt'];
-        // case text
-        else if (isset($Element['text']) && is_string($Element['text']) && strpos($Element['text'], '@') === 0 && strpos($Element['text'], ' ')) $hideout = $Element['text'];
-        // hand over to parent
-        else return parent::element($Element);
-
-        if (empty($Element['attributes'])) $Element['attributes'] = array();
-        $regex ="/(@(([\.#]{1})([^\s]+))|([^\s\"'=\/>@]+)?=(\"([^\"]+)\"|'([^']+)'|([^\s=]+)))?([\s]+(.*))?/";
-        if (!preg_match_all($regex, $hideout, $matches)) return parent::element($Element);
-        $key = $val = false;
-        if (!empty($matches[3][0])) {
-            if ($matches[3][0] == '#') $key = 'id';
-            if ($matches[3][0] == '.') $key = 'class';
-            $val = $matches[4][0];         
+    protected function extractElement(array $Component) {
+        if (empty($Component['element']['handler']['argument'])) return parent::extractElement($Component);
+        $inner = $Component['element']['handler']['argument'];
+        // apply to parent
+        if (is_array($inner)) $text = $inner[0];
+        else $text = $inner;
+        if (strpos($text, '@{') === 0) $delimiter = '}';
+        else if (strpos($text, '@.') === 0) $delimiter = ' ';
+        else if (strpos($text, '@#') === 0) $delimiter = ' ';
+        else if (strpos($text, '@') === 0 && strpos($text, '" ')) $delimiter = '" ';
+        else if (strpos($text, '@') === 0 && strpos($text, "' ")) $delimiter = "' ";
+        else return parent::extractElement($Component);
+        list($mdAttributesString, $text) = explode($delimiter, $text, 2);
+        $mdAttributesString = trim($mdAttributesString,'@{} ');
+        if (is_array($inner)) $inner[0] = trim($text);
+        $Component['element']['handler']['argument'] = is_array($inner)? $inner : trim($text);
+        $attributes = $this->getAttributes($mdAttributesString);
+        if (!empty($attributes)) {
+            if (empty($Component['element']['attributes'])) $Component['element']['attributes'] = $attributes;
+            else $Component['element']['attributes'] = array_merge($Component['element']['attributes'], $attributes);
         }
-        else if (!empty($matches[5][0]) && !empty($matches[6][0])) {
-            $key = $matches[5][0];
-            $val = trim($matches[6][0],"\"'");               
-        }
-        if ($key && $val) $Element['attributes'][$key] = $val;
+        return parent::extractElement($Component);
+    }
 
-        if ($Element['name'] == 'img') $Element['attributes']['alt'] = $matches[11][0];
-        else $Element['text'] = implode("\n", $matches[11]);
-          
-        return parent::element($Element);
+    /**
+     * Parse attributes and return array of attributes.
+     *
+     * Any attribute is supported, including short syntax for id (#) and class (.)
+     * @example
+     * #id
+     * .class
+     * data-foo=bar // spaces not permitted
+     * data-foo="bar" // spaces permitted
+     * data-foo='bar' // spaces permitted
+     * 
+     * In addition, this method also supports supplying a default Id value,
+     * which will be used to populate the id attribute in case it was not
+     * overridden.
+     * @param  string $mdAttributesString
+     * @return array
+     */
+    protected function getAttributes($mdAttributesString) {
+
+        // Split on components
+        $regex = '/(#[a-z]+[\w\-\:\.]*)|(\.[a-z]+[\w\-]+)|(([a-z]+[\w\-]+)=((\'|")?([^\'"]+))(\'|")?)|([-_:a-zA-Z0-9])/';
+        if (!preg_match_all($regex, $mdAttributesString, $matches)) return null;
+
+        $elements = $matches[0];
+        // Handle classes, IDs (only first ID taken into account) and any other attribute
+        $attr = array();
+        foreach ($elements as $key => $element) {
+            if ($element[0] === '.') {
+                $classes[] = substr($element, 1);
+            } else if ($element[0] === '#') {
+                if (empty($attr['id'])) $attr['id'] = substr($element, 1);
+            } else if (strpos($element, '=') > 0) {
+                $parts = explode('=', $element, 2);
+                $key = trim($parts[0]);
+                $value = trim($parts[1], "\"' ");
+                if ($key == 'id') {
+                    if (empty($attr['id'])) $attr['id'] = $value;
+                    else continue;
+                }
+                else if ($key == 'class') $classes[] = $value;
+                else $attr[$key] = $value;
+            }
+        }
+        if (!empty($classes)) $attr['class'] = implode(" ", $classes);
+        return $attr;
+    }
+
+    protected function inlineUrl($Excerpt) {
+        if ($this->urlsLinked !== true or ! isset($Excerpt['text'][2]) or $Excerpt['text'][2] !== '/') return;
+        if (preg_match('/(?<!\s)\bhttps?:[\/]{2}[^\s<]+\b\/*/ui', $Excerpt['context'], $matches, PREG_OFFSET_CAPTURE)) return;
+        return parent::inlineUrl($Excerpt);
     }
 }
