@@ -22,7 +22,7 @@
  * @since 1.0.3 pull label from any field for internal pages by surrounding fieldname with curled brackets e.g. [{headline}](1001), leave empty to pull from title, with fallback to httpUrl e.g. [](1001) 2020-10-22
  * @since 1.0.4 update arguments markdown() derived from parent class 2022-01-13
  * @since 1.0.5 fixed render bug after update to ParsedownExtra 0.8.0 (PW >= 3.0.181), allow multiple attributes 2022-02-20
- * @since 1.0.6 fixed test markup bug 2022-01-22
+ * @since 1.0.6 fixed test markup bug 2022-02-22
  */
 
 class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implements ConfigurableModule {
