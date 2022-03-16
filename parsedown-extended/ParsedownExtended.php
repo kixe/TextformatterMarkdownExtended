@@ -10,14 +10,15 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.6
+ * @version 1.0.7
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
- * @since 1.0.2 fixed bug cut off @attr + multiline values 2020-01-16
- * @since 1.0.3 fixed bug get special attributes 2020-07-31
- * @since 1.0.4 fixed bug get notice if ['name' => ...] is not defined 2021-12-13
- * @since 1.0.5 fixed bug get notice if $Element['name'] == 'img' is not defined 2022-02-08
- * @since 1.0.6 fixed render bug after update to 0.8.0 (PW >= 3.0.181), allow multiple attributes 2022-02-20
+ * @since 1.0.2 fixed bug: cut off @attr + multiline values 2020-01-16
+ * @since 1.0.3 fixed bug: get special attributes 2020-07-31
+ * @since 1.0.4 fixed bug: get notice if ['name' => ...] is not defined 2021-12-13
+ * @since 1.0.5 fixed bug: get notice if $Element['name'] == 'img' is not defined 2022-02-08
+ * @since 1.0.6 fixed render bug: after update to 0.8.0 (PW >= 3.0.181), allow multiple attributes 2022-02-20
+ * @since 1.0.7 fixed bug: added missing parent constructor 2022-03-09
  *
  */
 
@@ -27,6 +28,7 @@ class ParsedownExtended extends ParsedownExtra {
         if (version_compare(parent::version, '0.8.0') < 0) {
             throw new Exception('ParsedownExtended requires a later version of ParsedownExtra');
         }
+        parent::__construct();
     }
 
     /**
@@ -35,12 +37,15 @@ class ParsedownExtended extends ParsedownExtra {
      */
     protected function blockTable($Line, array $Block = null) {
         $Block = parent::blockTable($Line, $Block);
-        if (empty($Block['element']['text'][0]['text'][0]['text'])) return $Block;
-
+        if (empty($Block['element']['elements'][0]['elements'][0]['elements'])) return $Block;
         $columnlabels = array();
-        foreach ($Block['element']['text'][0]['text'][0]['text'] as $index => $headerCell) {
-            if(empty($headerCell['text'])) continue;
-            $columnlabels[$index] = str_replace(array('[^',']'), array(' (',')'), $headerCell['text']);
+        foreach ($Block['element']['elements'][0]['elements'][0]['elements'] as $index => $headerCell) {
+            if(empty($headerCell['handler']['argument'])) continue;
+            $text = $headerCell['handler']['argument'];
+            if (strpos($headerCell['handler']['argument'], '[^') !== false) {
+                $text = str_replace(array('[^',']'), array('<sup>','</sup>'), $text);
+            }
+            $columnlabels[$index] = $text;
         }
         $Block['columnlabels'] = $columnlabels;
         return $Block;
@@ -48,10 +53,9 @@ class ParsedownExtended extends ParsedownExtra {
 
     protected function blockTableContinue($Line, array $Block = null) {
         $Block = parent::blockTableContinue($Line, $Block);
-
-        if (empty($Block['columnlabels']) || empty($Block['element']['text'][1]['text'])) return $Block;
-        foreach ($Block['element']['text'][1]['text'] as &$tr) {
-            foreach ($tr['text'] as $index => &$td) {
+        if (empty($Block['columnlabels']) || empty($Block['element']['elements'][1]['elements'])) return $Block;
+        foreach ($Block['element']['elements'][1]['elements'] as &$tr) {
+            foreach ($tr['elements'] as $index => &$td) {
                 if(empty($Block['columnlabels'][$index])) continue;
                 if (!isset($td['attributes'])) $td['attributes'] = array();
                 $td['attributes']['data-label'] = $Block['columnlabels'][$index];
