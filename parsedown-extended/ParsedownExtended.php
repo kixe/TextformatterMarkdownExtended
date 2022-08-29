@@ -10,7 +10,7 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.7
+ * @version 1.0.8
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
  * @since 1.0.2 fixed bug: cut off @attr + multiline values 2020-01-16
@@ -19,6 +19,7 @@
  * @since 1.0.5 fixed bug: get notice if $Element['name'] == 'img' is not defined 2022-02-08
  * @since 1.0.6 fixed render bug: after update to 0.8.0 (PW >= 3.0.181), allow multiple attributes 2022-02-20
  * @since 1.0.7 fixed bug: added missing parent constructor 2022-03-09
+ * @since 1.0.8 fixed bug: replace special whitespaces before trim 2022-08-29
  *
  */
 
@@ -58,7 +59,7 @@ class ParsedownExtended extends ParsedownExtra {
             foreach ($tr['elements'] as $index => &$td) {
                 if(empty($Block['columnlabels'][$index])) continue;
                 if (!isset($td['attributes'])) $td['attributes'] = array();
-                $td['attributes']['data-label'] = $Block['columnlabels'][$index];
+                $td['attributes']['data-label'] = trim(preg_replace('/[\xC2\xA0\t\n\r\0\x0B]/u',' ', $Block['columnlabels'][$index]));
             }
         }
         return $Block;
@@ -91,7 +92,7 @@ class ParsedownExtended extends ParsedownExtra {
         else if (strpos($text, '@') === 0 && strpos($text, '" ')) $delimiter = '" ';
         else if (strpos($text, '@') === 0 && strpos($text, "' ")) $delimiter = "' ";
         else return parent::extractElement($Component);
-        list($mdAttributesString, $text) = explode($delimiter, $text, 2);
+        list($mdAttributesString, $text) = array_pad(explode($delimiter, $text, 2), 2, '');
         $mdAttributesString = trim($mdAttributesString,'@{} ');
         if (is_array($inner)) $inner[0] = trim($text);
         $Component['element']['handler']['argument'] = is_array($inner)? $inner : trim($text);
@@ -137,7 +138,7 @@ class ParsedownExtended extends ParsedownExtra {
             } else if (strpos($element, '=') > 0) {
                 $parts = explode('=', $element, 2);
                 $key = trim($parts[0]);
-                $value = trim($parts[1], "\"' ");
+                $value = trim(preg_replace('/[\xC2\xA0\t\n\r\0\x0B]/u',' ', $parts[1]),"\"' ");
                 if ($key == 'id') {
                     if (empty($attr['id'])) $attr['id'] = $value;
                     else continue;
