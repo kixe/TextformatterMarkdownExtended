@@ -1,0 +1,69 @@
+@charset "UTF-8";
+/** responsive + table stylesheet for the PW backend if TextformatterMarkdownExtended is used USAGE create a paragraph with the class 'followed-by-table' followed by a markdown table ``` @.followed-by-table | Foo | Bar | |-|-| | Bar | Foo | additional classes for size and vertical text alignement provided: .small .medium .aligntop (vertical text alignment in the row) .alignbottom (vertical text alignment in the row) .noswitch (stop bg color switching between even / odd row number) .right (alignemnt for medium and small tables, default: left) .center (alignemnt for medium and small tables, default: left) */
+/* markdown + table styling */
+.followed-by-table + table { margin: 0; width: 100%; }
+
+.followed-by-table.medium + table { width: 80%; }
+
+.followed-by-table.small + table { width: 60%; }
+
+.followed-by-table + table { line-height: 1.3rem; text-align: center; border-collapse: collapse; margin-bottom: 1.7rem; }
+
+.followed-by-table.center + table { margin: 0 auto; }
+
+.followed-by-table.right + table { margin: 0 0 0 auto; }
+
+.followed-by-table + table tr th, .followed-by-table + table tr td { padding: 0.4rem 1rem; text-align: right; }
+
+.followed-by-table + table tr th { background: #354b60; color: #ffffff; }
+
+.followed-by-table.noswitch + table { border: 1px solid #354b60; }
+
+.followed-by-table.noswitch + table tr td { background: #ffffff !important; }
+
+.followed-by-table + table td.underline { border-bottom: 1px solid #354b60; }
+
+.followed-by-table + table tr:nth-child(odd) { background: #ffffff; }
+
+.followed-by-table + table tr:nth-child(even) { background: #f4f4f4; }
+
+.followed-by-table + table tr th { text-align: center; }
+
+.followed-by-table + table tr td:nth-child(1) { text-align: left; }
+
+.footnotes a.footnote-backref { display: none; font-size: 0.7em; text-decoration: none; border-bottom: none; }
+
+/* footnotes */
+.followed-by-table + table sup { font-style: italic; padding-left: 0.2rem; }
+
+.followed-by-table + table th sup a { color: #ffffff; }
+
+.followed-by-table + table .footnotes { margin-top: 1rem !important; }
+
+.followed-by-table + table .footnotes * { text-align: left !important; padding-left: 0; }
+
+.followed-by-table + table .footnotes hr { border-color: rgba(0, 0, 0, 0.3); float: left; width: 4rem; }
+
+.followed-by-table + table ul, .followed-by-table + table .footnotes ol { clear: left; margin-left: 0; font-size: 0.8rem; list-style-position: inside; }
+
+.followed-by-table + table ul { list-style: none; }
+
+.followed-by-table + table ul li { margin-bottom: 0; }
+
+.followed-by-table + table ul li p, .followed-by-table + table .footnotes ol li p { display: inline-block; margin-bottom: 0; }
+
+/* vertical alignment */
+.followed-by-table.aligntop + table th, .followed-by-table.aligntop + table td { vertical-align: top; }
+
+.followed-by-table.alignbottom + table th, .followed-by-table.alignbottom + table td { vertical-align: bottom; }
+
+/* RESPONSIVE + table */
+@media only screen and (max-width: 40em) { /* markdown + table styling */ .followed-by-table + table { width: 100% !important; } .followed-by-table + table, .followed-by-table + table thead, .followed-by-table + table tbody, .followed-by-table + table th, .followed-by-table + table td, .followed-by-table + table tr { display: block; min-height: 2.1rem; } .followed-by-table + table caption { display: block; width: 100%; padding-bottom: 1em; } .followed-by-table + table { background: none; } .followed-by-table + table thead, .followed-by-table + table tbody, .followed-by-table + table tfoot { border: none; background: none; } /* Hide + table headers (but not display: none;, for accessibility) */ .followed-by-table + table thead tr:nth-child(1) { position: absolute; top: -99999px; left: -99999px; } .followed-by-table + table tr { position: relative; margin-bottom: 1rem; } .followed-by-table + table td, .followed-by-table + table th { /* Behave  like a "row" */ border: none; border-bottom: none; vertical-align: center; font-size: 1.1em !important; } .followed-by-table + table td:empty { display: none; } .followed-by-table + table tr td:nth-child(1) { text-align: center; } .followed-by-table + table td:before, .followed-by-table + table th:before { /* Now like a + table header */ display: block; float: left; /* Top/left values mimic padding */ white-space: nowrap; vertical-align: center; } .followed-by-table + table td:after { /*content: "\00A0\20AC"; */ } .followed-by-table + table td:nth-of-type(1) { font-size: 1.2rem !important; color: #fff; background: #354b60 !important; } .followed-by-table + table td:nth-of-type(1) a { color: #ffffff; } .followed-by-table + table td:nth-of-type(12) { margin-bottom: 3em; } .followed-by-table + table tr { background: #ffffff !important; } /* Label the data */ .followed-by-table + table td:before { text-align: left; content: attr(data-label) ": "; display: inline-block; /*min-width: 4em;*/ font-weight: bold; } .followed-by-table + table td:before { content: attr(data-label) ": "; } .followed-by-table + table td:nth-of-type(1):before, .followed-by-table + table td[data-label=""]:before, .followed-by-table + table td:not([data-label]):before { content: none; } }
+
+pre { position: relative; z-index: 0; overflow: visible; }
+
+pre > code + .copy-to-clipboard { position: absolute; top: -20px; right: 0; display: block; font-size: 20px; line-height: 1; }
+
+.copy-to-clipboard::after { content: '\00a0\f0ea'; font-family: 'Font Awesome 5 Free', FontAwesome; color: #999; }
+
+/*# sourceMappingURL=TextformatterMarkdownExtended.css.map */

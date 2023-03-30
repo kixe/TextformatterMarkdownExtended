@@ -10,7 +10,7 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.8
+ * @version 1.0.11
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
  * @since 1.0.2 fixed bug: cut off @attr + multiline values 2020-01-16
@@ -20,6 +20,10 @@
  * @since 1.0.6 fixed render bug: after update to 0.8.0 (PW >= 3.0.181), allow multiple attributes 2022-02-20
  * @since 1.0.7 fixed bug: added missing parent constructor 2022-03-09
  * @since 1.0.8 fixed bug: replace special whitespaces before trim 2022-08-29
+ * @since 1.0.9 fixed bug: trim($text, "\xC2\xA0\t\n\r\0\x0B ") \xC2 removes characters like © (Copyright Symbol)
+ * @since 1.0.10 fixed bug: allow single quotes inside double quoted attributes and vice versa 2023-03-23
+ * @since 1.0.11 replace double quotes inside attribute value with single quotes 2023-03-24
+ * @see https://www.utf8-chartable.de/unicode-utf8-table.pl?start=128&number=128&utf8=string-literal
  *
  */
 
@@ -74,7 +78,7 @@ class ParsedownExtended extends ParsedownExtra {
      * *@#unique_em emphatic*                   <em id="unique_em">emphatic</em>
      * [@.link-class link](targeturl)           <a href="targeturl" class="link-class">link</a>
      * ![@.image-class alttext](srcurl)         <img src="targeturl" class="image-class" alt="alttext"/>
-     * @{.classname data-foo="bar"}             <p class="classname another" data-foo="bar"> ... </p>
+     * @{class="classname another" data-foo="bar"}             <p class="classname another" data-foo="bar"> ... </p>
      *
      * **@data-label='Hyper Text Markup Language' HTML**
      *                                          <strong data-label="Hyper Text Markup Languag">HTML</strong>
@@ -86,7 +90,7 @@ class ParsedownExtended extends ParsedownExtra {
         // apply to parent
         if (is_array($inner)) $text = $inner[0];
         else $text = $inner;
-        if (strpos($text, '@{') === 0) $delimiter = '}';
+        if (strpos($text, '@{') === 0) $delimiter = '} ';
         else if (strpos($text, '@.') === 0) $delimiter = ' ';
         else if (strpos($text, '@#') === 0) $delimiter = ' ';
         else if (strpos($text, '@') === 0 && strpos($text, '" ')) $delimiter = '" ';
@@ -94,8 +98,9 @@ class ParsedownExtended extends ParsedownExtra {
         else return parent::extractElement($Component);
         list($mdAttributesString, $text) = array_pad(explode($delimiter, $text, 2), 2, '');
         $mdAttributesString = trim($mdAttributesString,'@{} ');
-        if (is_array($inner)) $inner[0] = trim($text);
-        $Component['element']['handler']['argument'] = is_array($inner)? $inner : trim($text);
+        $text = str_replace(["\xc2\xa0","\x0b"], ' ', $text); // replace NO-BREAK SPACE, VERTICAL TABULATION
+        if (is_array($inner)) $inner[0] = trim($text, "\t\n\r\0 ");
+        $Component['element']['handler']['argument'] = is_array($inner)? $inner : trim($text, "\t\n\r\0 ");
         $attributes = $this->getAttributes($mdAttributesString);
         if (!empty($attributes)) {
             if (empty($Component['element']['attributes'])) $Component['element']['attributes'] = $attributes;
@@ -112,8 +117,8 @@ class ParsedownExtended extends ParsedownExtra {
      * #id
      * .class
      * data-foo=bar // spaces not permitted
-     * data-foo="bar" // spaces permitted
-     * data-foo='bar' // spaces permitted
+     * data-foo="foo bar" // spaces and single quotes permitted inside double quotes
+     * data-foo='foo bar' // spaces and double quotes permitted inside single quotes
      * 
      * In addition, this method also supports supplying a default Id value,
      * which will be used to populate the id attribute in case it was not
@@ -124,7 +129,7 @@ class ParsedownExtended extends ParsedownExtra {
     protected function getAttributes($mdAttributesString) {
 
         // Split on components
-        $regex = '/(#[a-z]+[\w\-\:\.]*)|(\.[a-z]+[\w\-]+)|(([a-z]+[\w\-]+)=((\'|")?([^\'"]+))(\'|")?)|([-_:a-zA-Z0-9])/';
+        $regex = '/(#[a-z]+[\w\-\:\.]*)|(\.[a-z]+[\w\-]+)|(([a-z]+[\w\-]+)=(((\')([^\']+)(\'?))|((\")([^\"]+)(\"?))|([^\'" ]+)))|([-_:a-zA-Z0-9])/';
         if (!preg_match_all($regex, $mdAttributesString, $matches)) return null;
 
         $elements = $matches[0];
@@ -138,7 +143,17 @@ class ParsedownExtended extends ParsedownExtra {
             } else if (strpos($element, '=') > 0) {
                 $parts = explode('=', $element, 2);
                 $key = trim($parts[0]);
-                $value = trim(preg_replace('/[\xC2\xA0\t\n\r\0\x0B]/u',' ', $parts[1]),"\"' ");
+                $value = trim(preg_replace('/[\xC2\xA0\t\n\r\0\x0B]/u',' ', $parts[1]));
+                // double quoted attr value
+                if (strpos($value,'"') === 0) $value = trim($value,'"');
+                // single quoted attr value
+                else if (strpos($value,"'") === 0) {
+                    $value = trim($value,"'");
+                    // double quotes inside single quoted value? replace!
+                    if (strpos($value,'"') !== false) {
+                        $value = str_replace('"', "'", $value);
+                    }
+                }
                 if ($key == 'id') {
                     if (empty($attr['id'])) $attr['id'] = $value;
                     else continue;
