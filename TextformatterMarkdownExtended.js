@@ -7,12 +7,19 @@
  *
  * @changelog 1.0.0 init 2023-03-30
  *
+ * @vars config.defaultModalPath - default: '/global/modals/', overwrite via data attribute: data-modal-path
+ *       config.defaultPlaylistPath - default: '/global/playlists/', overwrite via data attribute: data-playlist-path
+ *		 config.labelOk - overwrite via data attribute: data-label-confirm
+ *		 config.labelCancel - overwrite via data attribute: data-label-cancel
+ *		 config.edsaTitle - overwrite via data attribute: data-title
+ *		 config.edsaText - overwrite via data attribute: data-text
+ *		 config.locale
+ *		 config.host
+ * 		 config.cat3daHosts
+ *
  */
  
 jQuery(document).ready(function() {
-
-	const defaultModalPath = '/global/modals/';	
-	const defaultPlaylistPath = '/global/playlists/';
 
 	/**
 	 * Convert dashed string to camelCase string
@@ -84,9 +91,11 @@ jQuery(document).ready(function() {
 			// dataPromptFields: [], // type prompt mulitple??		
 			dataId: 0, // page, youtube, vimeo
 			dataFile: '',// type audio, file url
-			dataUrl: '', // type page, cat3da, video
+			dataUrl: '', // type page, cat3da, video, pdf
 			dataClass: '', // css class added to outer modal container
 			dataPost: [], // type page (param fn.modalPage(data) valid json object)
+			dataModalPath: config.defaultModalPath? config.defaultModalPath : '/global/modals/',
+			dataPlaylistPath: config.defaultPlaylistPath? config.defaultPlaylistPath : '/global/playlists/',
 			
 			// runtime array of audio files
 			audioList: [],
@@ -141,7 +150,7 @@ jQuery(document).ready(function() {
 			 * TODO: allow css classes for containers / buttons
 			 *
 			 */
-			 edsModal: function (func) {
+			 edsaModal: function (func) {
 			 			 
 				let edsaTitle = vars.dataTitle? vars.dataTitle : config.edsaTitle;
 				let edsaText = vars.dataText? vars.dataText : config.edsaText;
@@ -252,8 +261,8 @@ jQuery(document).ready(function() {
 			 * type page
 			 *
 			 */
-			modalPage: function (data) {				
-				let url = config.host + config.locale + defaultModalPath + "?id=" + vars.dataId;
+			modalPage: function (data) {
+				let url = config.host + config.locale + vars.dataModalPath + "?id=" + vars.dataId;
 				data = (typeof data !== 'undefined') ?  data : null;
 				$.ajax({
 					type: 'POST',
@@ -277,7 +286,7 @@ jQuery(document).ready(function() {
 			 * max value 23:59:59
 			 *
 			 */
-			 renderTimeString: function (sec) {
+			 renderTimeString: function (sec = 0) {
 				sec = Math.round(sec);
 				if (sec >= 86400) {
 					alert('Cannot render duration time string [' + sec + 'sec] – too long!');
@@ -325,7 +334,7 @@ jQuery(document).ready(function() {
 					}
 					// PW page ID holding playlist return JSON string by ajax call
 					else if (vars.dataId) {
-						url = config.host + config.locale + defaultPlaylistPath + "?id=" + vars.dataId;
+						url = config.host + config.locale + vars.dataPlaylistPath + "?id=" + vars.dataId;
 					}
 					// console.log(url);
 					if (url) {
@@ -399,18 +408,21 @@ jQuery(document).ready(function() {
 
 			    	},
 			    	onload: function() {
+			    		/*
+			    		// under development
 			    		loadedBytes = setInterval(function() {
 			    			// sound._xhr
 			    			// sound._sounds[0].addEventListener('create', function(e) {
 			    			// console.log(sound._sounds[0]._node);
-			    			console.log(sound._sounds[0]._loadFn());
-			    			console.log(sound.progress);
+			    			// console.log(sound._sounds[0]._loadFn());
+			    			// console.log(sound.progress);
 			    			// console.log(sound._sounds[0]._node.buffered.length);
 			    			
 			    			// });
 			    			// console.log(sound._sounds[0]); 
 			    			// console.log(new Date().getTime());		
 			    		},500);
+			    		*/
 			    		let previousItem = activeItem;	    		  		
 			    		activeItem = el.querySelector('a[data-src="' + this._src + '"]').parentNode;
 			    		if (activeItem !== previousItem) {
@@ -745,18 +757,18 @@ jQuery(document).ready(function() {
 				fn.modalCat3dap();
 				break;
 				
-			// external data source agreement	
+			// external data source agreement
 			case cls.contains('uk-modal-video'):
-				fn.edsModal('modalVideo');
+				fn.edsaModal('modalVideo');
 				break;
 			case cls.contains('uk-modal-vimeo'):
-				fn.edsModal('modalVimeo');
+				fn.edsaModal('modalVimeo');
 				break;
 			case cls.contains('uk-modal-youtube'):		
-				fn.edsModal('modalYoutube');
+				fn.edsaModal('modalYoutube');
 				break; 
 			case cls.contains('uk-modal-pdf'):
-				fn.edsModal('modalPdf');
+				fn.edsaModal('modalPdf');
 				break; 
 		}	
 	});

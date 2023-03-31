@@ -10,7 +10,7 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.11
+ * @version 1.0.13
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
  * @since 1.0.2 fixed bug: cut off @attr + multiline values 2020-01-16
@@ -23,8 +23,11 @@
  * @since 1.0.9 fixed bug: trim($text, "\xC2\xA0\t\n\r\0\x0B ") \xC2 removes characters like © (Copyright Symbol)
  * @since 1.0.10 fixed bug: allow single quotes inside double quoted attributes and vice versa 2023-03-23
  * @since 1.0.11 replace double quotes inside attribute value with single quotes 2023-03-24
+ * @since 1.0.12 ESCAPE double quotes inside attribute value with single quotes instead of replacing 2023-03-31
+ * @since 1.0.13 fixed bug: allow omitting quotes for single attribute with values without spaces 2023-03-31
+ * 
  * @see https://www.utf8-chartable.de/unicode-utf8-table.pl?start=128&number=128&utf8=string-literal
- *
+ 
  */
 
 class ParsedownExtended extends ParsedownExtra {
@@ -95,6 +98,7 @@ class ParsedownExtended extends ParsedownExtra {
         else if (strpos($text, '@#') === 0) $delimiter = ' ';
         else if (strpos($text, '@') === 0 && strpos($text, '" ')) $delimiter = '" ';
         else if (strpos($text, '@') === 0 && strpos($text, "' ")) $delimiter = "' ";
+        else if (strpos($text, '@') === 0) $delimiter = ' ';
         else return parent::extractElement($Component);
         list($mdAttributesString, $text) = array_pad(explode($delimiter, $text, 2), 2, '');
         $mdAttributesString = trim($mdAttributesString,'@{} ');
@@ -149,9 +153,10 @@ class ParsedownExtended extends ParsedownExtra {
                 // single quoted attr value
                 else if (strpos($value,"'") === 0) {
                     $value = trim($value,"'");
-                    // double quotes inside single quoted value? replace!
+                    // double quotes inside single quoted value? escape!
+                    // do not replace with single quotes to prevent json arrays from becoming invalid
                     if (strpos($value,'"') !== false) {
-                        $value = str_replace('"', "'", $value);
+                        $value = str_replace('"', "\"", $value);
                     }
                 }
                 if ($key == 'id') {
