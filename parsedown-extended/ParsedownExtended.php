@@ -10,7 +10,8 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.13
+ * @version 1.0.14
+ * 
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
  * @since 1.0.2 fixed bug: cut off @attr + multiline values 2020-01-16
@@ -25,6 +26,7 @@
  * @since 1.0.11 replace double quotes inside attribute value with single quotes 2023-03-24
  * @since 1.0.12 ESCAPE double quotes inside attribute value with single quotes instead of replacing 2023-03-31
  * @since 1.0.13 fixed bug: allow omitting quotes for single attribute with values without spaces 2023-03-31
+ * @since 1.0.14 end slash for void elements must not be specified (HTML5) 2023-12-17
  * 
  * @see https://www.utf8-chartable.de/unicode-utf8-table.pl?start=128&number=128&utf8=string-literal
  
@@ -37,6 +39,20 @@ class ParsedownExtended extends ParsedownExtra {
             throw new Exception('ParsedownExtended requires a later version of ParsedownExtra');
         }
         parent::__construct();
+    }
+
+    /**
+     * end slash for void elements must not be specified (HTML5) some validators throw info ...
+     * HTML5 is by far the most widely used markup language today because of the addition of many essential features.
+     * @see Parsedown::element()
+     * 
+     */
+    protected function element(array $Element) {
+        $return = parent::element($Element);
+        if (strlen($return) > 2 && strrpos($return,'/>', 2)) {
+            return trim(substr($return, 0, -2)) . ">";
+        }
+        return $return;
     }
 
     /**

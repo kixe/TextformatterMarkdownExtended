@@ -15,7 +15,7 @@
  * Parsedown @copyright Emanuil Rusev.
  * Markdown invented by John Gruber.
  * 
- * @version 1.0.9 2023-03-31
+ * @version 1.1.0 2023-12-17
  * 
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
@@ -27,6 +27,7 @@
  * @since 1.0.7 fixed bug in ParsedownExtended 2023-02-08
  * @since 1.0.8 provide uikit-modal.js in backend 2023-03-30
  * @since 1.0.9 update js and ParesdownExtended 2023-03-31
+ * @since 1.1.0 update ParesdownExtended 2023-12-17
  * 
  */
 
@@ -35,7 +36,7 @@ class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implement
 	public static function getModuleInfo() {
 		return array(
 			'title'   => 'Markdown/Parsedown Extended',
-			'version' => 109,
+			'version' => 110,
 			'author' => 'kixe',
 			'summary' => "Extension for Markdown/Parsedown extra lightweight markup language by Emanuil Rusev. Based on Markdown by John Gruber.",
 			'requires' => ['ProcessWire>=3.0.181']
@@ -81,7 +82,8 @@ class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implement
 			$extra = new \ParsedownExtended();
 			$str = $extra->text($str);
 				
-			return $str; 
+			return str_replace(["</p>\n<p>"],['</p><p>'], $str);
+
 		}
 		else return $markdown;
 	}
