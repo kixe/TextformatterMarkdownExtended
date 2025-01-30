@@ -15,7 +15,7 @@
  * Parsedown @copyright Emanuil Rusev.
  * Markdown invented by John Gruber.
  * 
- * @version 1.1.0 2023-12-17
+ * @version 1.1.1 2024-12-14
  * 
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
@@ -28,6 +28,7 @@
  * @since 1.0.8 provide uikit-modal.js in backend 2023-03-30
  * @since 1.0.9 update js and ParesdownExtended 2023-03-31
  * @since 1.1.0 update ParesdownExtended 2023-12-17
+ * @since 1.1.1 update ParesdownExtended to v1.0.15 (support span) 2024-12-14
  * 
  */
 
@@ -36,7 +37,7 @@ class TextformatterMarkdownExtended extends TextformatterMarkdownExtra implement
 	public static function getModuleInfo() {
 		return array(
 			'title'   => 'Markdown/Parsedown Extended',
-			'version' => 110,
+			'version' => 111,
 			'author' => 'kixe',
 			'summary' => "Extension for Markdown/Parsedown extra lightweight markup language by Emanuil Rusev. Based on Markdown by John Gruber.",
 			'requires' => ['ProcessWire>=3.0.181']

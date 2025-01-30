@@ -10,7 +10,7 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.14
+ * @version 1.0.15
  * 
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
@@ -27,6 +27,7 @@
  * @since 1.0.12 ESCAPE double quotes inside attribute value with single quotes instead of replacing 2023-03-31
  * @since 1.0.13 fixed bug: allow omitting quotes for single attribute with values without spaces 2023-03-31
  * @since 1.0.14 end slash for void elements must not be specified (HTML5) 2023-12-17
+ * @since 1.0.15 added support for inline element: span 2024-12-14
  * 
  * @see https://www.utf8-chartable.de/unicode-utf8-table.pl?start=128&number=128&utf8=string-literal
  
@@ -125,8 +126,55 @@ class ParsedownExtended extends ParsedownExtra {
         if (!empty($attributes)) {
             if (empty($Component['element']['attributes'])) $Component['element']['attributes'] = $attributes;
             else $Component['element']['attributes'] = array_merge($Component['element']['attributes'], $attributes);
+            // keep attributes in mind ...
+            $Component['element']['_attributes'] = $Component['element']['attributes'];
         }
+
         return parent::extractElement($Component);
+    }
+
+    /**
+     * support for span elements: --span--
+     * to be able to assign attributes to a string without adding any style
+     * e.g. --@#span-id Text--
+     * 
+     */
+    protected $InlineTypes = array(
+        '!' => array('Image'),
+        '&' => array('SpecialCharacter'),
+        '*' => array('Emphasis'),
+        ':' => array('Url'),
+        '<' => array('UrlTag', 'EmailTag', 'Markup'),
+        '[' => array('Link'),
+        '_' => array('Emphasis'),
+        '`' => array('Code'),
+        '~' => array('Strikethrough'),
+        '\\' => array('EscapeSequence'),
+        '-' => array('Span'),
+    );
+
+    protected $inlineMarkerList = '-!*_&[:<`~\\';
+
+    protected function inlineSpan($Excerpt) {
+        if ( ! isset($Excerpt['text'][1]))
+        {
+            return;
+        }
+
+        if ($Excerpt['text'][1] === '-' and preg_match('/^--(?=\S)(.+?)(?<=\S)--/', $Excerpt['text'], $matches))
+        {
+            return array(
+                'extent' => strlen($matches[0]),
+                'element' => array(
+                    'name' => 'span',
+                    'handler' => array(
+                        'function' => 'lineElements',
+                        'argument' => $matches[1],
+                        'destination' => 'elements',
+                    )
+                ),
+            );
+        }
     }
 
     /**
@@ -192,4 +240,84 @@ class ParsedownExtended extends ParsedownExtra {
         if (preg_match('/(?<!\s)\bhttps?:[\/]{2}[^\s<]+\b\/*/ui', $Excerpt['context'], $matches, PREG_OFFSET_CAPTURE)) return;
         return parent::inlineUrl($Excerpt);
     }
+
+    /**
+     * overides function in parent class
+     * @test
+     * @disabled
+     * 
+     * loosing elements / happened if Textformatter is applied twice
+     * 
+     * @see
+     * https://github.com/erusev/parsedown-extra/issues/170
+     * no need to remove child if not applied before
+     * https://github.com/erusev/parsedown-extra/issues/168 
+     * https://github.com/erusev/parsedown-extra/issues/173
+     * https://github.com/erusev/parsedown-extra/issues/153#issuecomment-662953142
+     * https://github.com/erusev/parsedown-extra/issues/130
+     * https://github.com/erusev/parsedown-extra/issues/137
+     * https://github.com/erusev/parsedown-extra/issues/102
+     * https://github.com/erusev/parsedown-extra/issues/90
+     * https://github.com/erusev/parsedown-extra/issues/87
+     * 
+     * @param $wrap bool #internal
+     * 
+     *
+    protected function processTag($elementMarkup, $wrap = true) # recursive
+    {
+        // libxml_use_internal_errors(true);
+
+        $DOMDocument = new DOMDocument;
+
+        // wrap in div to get all nodes as childs in the parent call but not in foreach loop, removed before return
+        if ($wrap) $elementMarkup = "<div id=\"process_tag_wrapper\">$elementMarkup</div>";
+        $elementMarkup = htmlentities($elementMarkup, ENT_NOQUOTES, 'UTF-8');
+        $elementMarkup = htmlspecialchars_decode($elementMarkup, ENT_NOQUOTES);
+        // no need to remove or replace later if not implied (doctype, <html><body>)
+        // LIBXML_COMPACT is used for setting the optimization for small node allocation, which is expected here. May improve application performance
+        $DOMDocument->loadHTML($elementMarkup, LIBXML_HTML_NOIMPLIED | LIBXML_COMPACT | LIBXML_HTML_NODEFDTD);
+        $elementText = '';
+        $DOMElement = $DOMDocument->documentElement;
+
+        if ($DOMElement->getAttribute('markdown') === '1')
+        {
+            foreach ($DOMElement->childNodes as $Node)
+            {
+                if($Node === NULL) continue;
+                $elementText .= $DOMDocument->saveHTML($Node);
+            }
+
+            $DOMElement->removeAttribute('markdown');
+
+            $elementText = "\n".$this->text($elementText)."\n";
+        
+        }
+        else
+        {
+            foreach ($DOMElement->childNodes as $Node)
+            {
+                if($Node === NULL) continue;
+                $nodeMarkup = $DOMDocument->saveHTML($Node);
+
+                if ($Node instanceof DOMElement and ! in_array($Node->nodeName, $this->textLevelElements))
+                {
+                    $elementText .= $this->processTag($nodeMarkup, false);
+                }
+                else
+                {
+                    $elementText .= $nodeMarkup;
+                }
+            }
+        }
+
+        // strip wrapper
+        if ($DOMDocument->getElementById("process_tag_wrapper")) return $elementText;
+
+        # because we don't want for markup to get encoded
+        $DOMElement->nodeValue = 'placeholder\x1A';
+        $markup = $DOMDocument->saveHTML($DOMElement);
+        $markup = str_replace('placeholder\x1A', $elementText, $markup);
+        return $markup;
+    }
+    */
 }

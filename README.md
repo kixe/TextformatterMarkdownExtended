@@ -16,12 +16,12 @@ followed by a dot (.) for a class and hash character (#) for an ID. For any othe
 | MARKDOWN | HTML |
 |:-|:-| 
 | \#@.headline-1 Headline | `<h1 class="headline-1"></h1>` |
-| \*@#unique_em emphatic* | `<em id="unique_em">emphatic</em>` |
+| \*@\#unique_em emphatic* | `<em id="unique_em">emphatic</em>` |
 | \*\*@title='Hyper Text Markup Language' HTML** | `<strong title="Hyper Text Markup Languag">HTML</strong>` |
 | \[@.link-class link](targeturl) | `<a href="targeturl" class="link-class">link</a>` |
 | \!\[@.image-class alttext](srcurl) | `<img src="targeturl" class="image-class" alt="alttext"/>` |
 
-## multiple Attributes
+## Multiple Attributes
 Add multiple attributes by surrounding them with curled brackets. Separate attributes with space character.
 Example
 
