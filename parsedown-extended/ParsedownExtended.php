@@ -10,7 +10,7 @@
  * @copyright kixe (Christoph Thelen)
  * @license  Licensed under the MIT License (MIT), @see LICENSE.txt
  *
- * @version 1.0.15
+ * @version 1.0.16
  * 
  * @since 1.0.0 init 2018-08-10
  * @since 1.0.1 support for images 2020-01-16
@@ -28,6 +28,7 @@
  * @since 1.0.13 fixed bug: allow omitting quotes for single attribute with values without spaces 2023-03-31
  * @since 1.0.14 end slash for void elements must not be specified (HTML5) 2023-12-17
  * @since 1.0.15 added support for inline element: span 2024-12-14
+ * @since 1.0.16 moved sanitizer (NO-BREAK SPACE, VERTICAL TABULATION), throw exception 2025-05-02
  * 
  * @see https://www.utf8-chartable.de/unicode-utf8-table.pl?start=128&number=128&utf8=string-literal
  
@@ -110,25 +111,32 @@ class ParsedownExtended extends ParsedownExtra {
         // apply to parent
         if (is_array($inner)) $text = $inner[0];
         else $text = $inner;
-        if (strpos($text, '@{') === 0) $delimiter = '} ';
-        else if (strpos($text, '@.') === 0) $delimiter = ' ';
-        else if (strpos($text, '@#') === 0) $delimiter = ' ';
-        else if (strpos($text, '@') === 0 && strpos($text, '" ')) $delimiter = '" ';
-        else if (strpos($text, '@') === 0 && strpos($text, "' ")) $delimiter = "' ";
+
+        // sanitize ...
+        $text = str_replace(["\xc2\xa0","\x0b"], ' ', $text); // replace NO-BREAK SPACE, VERTICAL TABULATION
+        if (strpos($text, '@{') === 0) $delimiter = '} '; // multiple attributes   
+        else if (strpos($text, '@.') === 0) $delimiter = ' '; // single class (no space)
+        else if (strpos($text, '@#') === 0) $delimiter = ' '; // id
+        else if (strpos($text, '@') === 0 && strpos($text, '" ')) $delimiter = '" '; // any single attribute
+        else if (strpos($text, '@') === 0 && strpos($text, "' ")) $delimiter = "' "; // any single attribute
         else if (strpos($text, '@') === 0) $delimiter = ' ';
         else return parent::extractElement($Component);
+      
         list($mdAttributesString, $text) = array_pad(explode($delimiter, $text, 2), 2, '');
         $mdAttributesString = trim($mdAttributesString,'@{} ');
-        $text = str_replace(["\xc2\xa0","\x0b"], ' ', $text); // replace NO-BREAK SPACE, VERTICAL TABULATION
+
         if (is_array($inner)) $inner[0] = trim($text, "\t\n\r\0 ");
         $Component['element']['handler']['argument'] = is_array($inner)? $inner : trim($text, "\t\n\r\0 ");
         $attributes = $this->getAttributes($mdAttributesString);
+
         if (!empty($attributes)) {
             if (empty($Component['element']['attributes'])) $Component['element']['attributes'] = $attributes;
             else $Component['element']['attributes'] = array_merge($Component['element']['attributes'], $attributes);
             // keep attributes in mind ...
             $Component['element']['_attributes'] = $Component['element']['attributes'];
-        }
+        } else {
+            throw new Exception('Unable to get attributes.');
+        } 
 
         return parent::extractElement($Component);
     }
@@ -177,16 +185,35 @@ class ParsedownExtended extends ParsedownExtra {
         }
     }
 
+    #
+    # Rule
+
+    protected function blockRule($Line)
+    {
+        $marker = $Line['text'][0];
+
+        if (substr_count($Line['text'], $marker) >= 3 and chop($Line['text'], " $marker") === '')
+        {
+            $Block = array(
+                'element' => array(
+                    'name' => 'hr',
+                ),
+            );
+
+            return $Block;
+        }
+    }
+
     /**
      * Parse attributes and return array of attributes.
      *
      * Any attribute is supported, including short syntax for id (#) and class (.)
      * @example
      * #id
-     * .class
+     * .class // spaces not permitted
      * data-foo=bar // spaces not permitted
-     * data-foo="foo bar" // spaces and single quotes permitted inside double quotes
-     * data-foo='foo bar' // spaces and double quotes permitted inside single quotes
+     * data-foo="foo bar" // single quotes permitted inside double quotes
+     * data-foo='foo bar' // double quotes permitted inside single quotes
      * 
      * In addition, this method also supports supplying a default Id value,
      * which will be used to populate the id attribute in case it was not
